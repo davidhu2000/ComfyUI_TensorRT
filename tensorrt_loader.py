@@ -149,6 +149,8 @@ class TensorRTLoader:
                         "auraflow",
                         "flux_dev",
                         "flux_schnell",
+                        "wan1.3b",
+                        "wan14b",
                     ],
                 ),
             }
@@ -203,6 +205,17 @@ class TensorRTLoader:
             conf.unet_config["disable_unet_model_creation"] = True
             model = conf.get_model({})
             unet.dtype = torch.bfloat16  # TODO: autodetect
+        elif model_type in ["wan1.3b", "wan14b"]:
+            # Configure WAN model based on size
+            model_size = "1.3B" if model_type == "wan1.3b" else "14B"
+            conf = comfy.supported_models.WAN21_T2V({"model_size": model_size})
+            # conf.unet_config["disable_unet_model_creation"] = True
+
+            # Get the model instance
+            model = conf.get_model({})
+
+            # Set appropriate dtype for WAN models
+            unet.dtype = torch.bfloat16  # WAN models typically use bfloat16
         model.diffusion_model = unet
         model.memory_required = (
             lambda *args, **kwargs: 0
