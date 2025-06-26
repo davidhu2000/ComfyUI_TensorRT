@@ -1,4 +1,4 @@
-#Put this in the custom_nodes folder, put your tensorrt engine files in ComfyUI/models/tensorrt/ (you will have to create the directory)
+# Put this in the custom_nodes folder, put your tensorrt engine files in ComfyUI/models/tensorrt/ (you will have to create the directory)
 
 import torch
 import os
@@ -11,11 +11,14 @@ import folder_paths
 
 if "tensorrt" in folder_paths.folder_names_and_paths:
     folder_paths.folder_names_and_paths["tensorrt"][0].append(
-        os.path.join(folder_paths.models_dir, "tensorrt"))
+        os.path.join(folder_paths.models_dir, "tensorrt")
+    )
     folder_paths.folder_names_and_paths["tensorrt"][1].add(".engine")
 else:
     folder_paths.folder_names_and_paths["tensorrt"] = (
-        [os.path.join(folder_paths.models_dir, "tensorrt")], {".engine"})
+        [os.path.join(folder_paths.models_dir, "tensorrt")],
+        {".engine"},
+    )
 
 import tensorrt as trt
 
@@ -23,6 +26,7 @@ trt.init_libnvinfer_plugins(None, "")
 
 logger = trt.Logger(trt.Logger.INFO)
 runtime = trt.Runtime(logger)
+
 
 # Is there a function that already exists for this?
 def trt_datatype_to_torch(datatype):
@@ -34,6 +38,7 @@ def trt_datatype_to_torch(datatype):
         return torch.int32
     elif datatype == trt.bfloat16:
         return torch.bfloat16
+
 
 class TrTUnet:
     def __init__(self, engine_path):
@@ -48,7 +53,16 @@ class TrTUnet:
             shape = [shape[0] // split_batch] + list(shape[1:])
             self.context.set_input_shape(k, shape)
 
-    def __call__(self, x, timesteps, context, y=None, control=None, transformer_options=None, **kwargs):
+    def __call__(
+        self,
+        x,
+        timesteps,
+        context,
+        y=None,
+        control=None,
+        transformer_options=None,
+        **kwargs,
+    ):
         model_inputs = {"x": x, "timesteps": timesteps, "context": context}
 
         if y is not None:
@@ -64,7 +78,7 @@ class TrTUnet:
         opt_batch = dims[1][0]
         max_batch = dims[2][0]
 
-        #Split batch if our batch is bigger than the max batch size the trt engine supports
+        # Split batch if our batch is bigger than the max batch size the trt engine supports
         for i in range(max_batch, min_batch - 1, -1):
             if batch_size % i == 0:
                 curr_split_batch = batch_size // i
@@ -75,13 +89,15 @@ class TrTUnet:
         model_inputs_converted = {}
         for k in model_inputs:
             data_type = self.engine.get_tensor_dtype(k)
-            model_inputs_converted[k] = model_inputs[k].to(dtype=trt_datatype_to_torch(data_type))
+            model_inputs_converted[k] = model_inputs[k].to(
+                dtype=trt_datatype_to_torch(data_type)
+            )
 
         output_binding_name = self.engine.get_tensor_name(len(model_inputs))
         out_shape = self.engine.get_tensor_shape(output_binding_name)
         out_shape = list(out_shape)
 
-        #for dynamic profile case where the dynamic params are -1
+        # for dynamic profile case where the dynamic params are -1
         for idx in range(len(out_shape)):
             if out_shape[idx] == -1:
                 out_shape[idx] = x.shape[idx]
@@ -89,16 +105,22 @@ class TrTUnet:
                 if idx == 0:
                     out_shape[idx] *= curr_split_batch
 
-        out = torch.empty(out_shape, 
-                          device=x.device, 
-                          dtype=trt_datatype_to_torch(self.engine.get_tensor_dtype(output_binding_name)))
+        out = torch.empty(
+            out_shape,
+            device=x.device,
+            dtype=trt_datatype_to_torch(
+                self.engine.get_tensor_dtype(output_binding_name)
+            ),
+        )
         model_inputs_converted[output_binding_name] = out
 
         stream = torch.cuda.default_stream(x.device)
         for i in range(curr_split_batch):
             for k in model_inputs_converted:
                 x = model_inputs_converted[k]
-                self.context.set_tensor_address(k, x[(x.shape[0] // curr_split_batch) * i:].data_ptr())
+                self.context.set_tensor_address(
+                    k, x[(x.shape[0] // curr_split_batch) * i :].data_ptr()
+                )
             self.context.execute_async_v3(stream_handle=stream.cuda_stream)
         # stream.synchronize() #don't need to sync stream since it's the default torch one
         return out
@@ -113,9 +135,25 @@ class TrTUnet:
 class TensorRTLoader:
     @classmethod
     def INPUT_TYPES(s):
-        return {"required": {"unet_name": (folder_paths.get_filename_list("tensorrt"), ),
-                             "model_type": (["sdxl_base", "sdxl_refiner", "sd1.x", "sd2.x-768v", "svd", "sd3", "auraflow", "flux_dev", "flux_schnell"], ),
-                             }}
+        return {
+            "required": {
+                "unet_name": (folder_paths.get_filename_list("tensorrt"),),
+                "model_type": (
+                    [
+                        "sdxl_base",
+                        "sdxl_refiner",
+                        "sd1.x",
+                        "sd2.x-768v",
+                        "svd",
+                        "sd3",
+                        "auraflow",
+                        "flux_dev",
+                        "flux_schnell",
+                    ],
+                ),
+            }
+        }
+
     RETURN_TYPES = ("MODEL",)
     FUNCTION = "load_unet"
     CATEGORY = "TensorRT"
@@ -130,8 +168,7 @@ class TensorRTLoader:
             conf.unet_config["disable_unet_model_creation"] = True
             model = comfy.model_base.SDXL(conf)
         elif model_type == "sdxl_refiner":
-            conf = comfy.supported_models.SDXLRefiner(
-                {"adm_in_channels": 2560})
+            conf = comfy.supported_models.SDXLRefiner({"adm_in_channels": 2560})
             conf.unet_config["disable_unet_model_creation"] = True
             model = comfy.model_base.SDXLRefiner(conf)
         elif model_type == "sd1.x":
@@ -141,7 +178,9 @@ class TensorRTLoader:
         elif model_type == "sd2.x-768v":
             conf = comfy.supported_models.SD20({})
             conf.unet_config["disable_unet_model_creation"] = True
-            model = comfy.model_base.BaseModel(conf, model_type=comfy.model_base.ModelType.V_PREDICTION)
+            model = comfy.model_base.BaseModel(
+                conf, model_type=comfy.model_base.ModelType.V_PREDICTION
+            )
         elif model_type == "svd":
             conf = comfy.supported_models.SVD_img2vid({})
             conf.unet_config["disable_unet_model_creation"] = True
@@ -158,18 +197,25 @@ class TensorRTLoader:
             conf = comfy.supported_models.Flux({})
             conf.unet_config["disable_unet_model_creation"] = True
             model = conf.get_model({})
-            unet.dtype = torch.bfloat16 #TODO: autodetect
+            unet.dtype = torch.bfloat16  # TODO: autodetect
         elif model_type == "flux_schnell":
             conf = comfy.supported_models.FluxSchnell({})
             conf.unet_config["disable_unet_model_creation"] = True
             model = conf.get_model({})
-            unet.dtype = torch.bfloat16 #TODO: autodetect
+            unet.dtype = torch.bfloat16  # TODO: autodetect
         model.diffusion_model = unet
-        model.memory_required = lambda *args, **kwargs: 0 #always pass inputs batched up as much as possible, our TRT code will handle batch splitting
+        model.memory_required = (
+            lambda *args, **kwargs: 0
+        )  # always pass inputs batched up as much as possible, our TRT code will handle batch splitting
 
-        return (comfy.model_patcher.ModelPatcher(model,
-                                                 load_device=comfy.model_management.get_torch_device(),
-                                                 offload_device=comfy.model_management.unet_offload_device()),)
+        return (
+            comfy.model_patcher.ModelPatcher(
+                model,
+                load_device=comfy.model_management.get_torch_device(),
+                offload_device=comfy.model_management.unet_offload_device(),
+            ),
+        )
+
 
 NODE_CLASS_MAPPINGS = {
     "TensorRTLoader": TensorRTLoader,
