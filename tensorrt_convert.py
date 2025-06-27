@@ -196,7 +196,7 @@ class TRT_MODEL_CONVERSION_BASE:
             dtype = torch.bfloat16
         elif isinstance(model.model, comfy.model_base.WAN21):  # WAN model
             # WAN model specific configuration
-            context_dim = model.model.model_config.unet_config.get("context_dim", 1024)
+            context_dim = model.model.model_config.unet_config.get("context_dim", 4096)
             y_dim = 0  # WAN doesn't use y input
             context_len = 1  # WAN uses single context vector
             context_len_min = 1
