@@ -151,7 +151,6 @@ class TRT_MODEL_CONVERSION_BASE:
         context_opt,
         context_max,
         num_video_frames,
-        opset_version,
         is_static: bool,
     ):
         output_onnx = os.path.normpath(
@@ -440,10 +439,8 @@ class TRT_MODEL_CONVERSION_BASE:
             verbose=False,
             input_names=input_names,
             output_names=output_names,
-            opset_version=opset_version,
-            # dynamic_axes=dynamic_axes,
-            dynamic_axes=None,  # disable dynamic shapes
-            dynamo=True,
+            opset_version=17,
+            dynamic_axes=None,
         )
 
         comfy.model_management.unload_all_models()
@@ -767,15 +764,6 @@ class STATIC_TRT_MODEL_CONVERSION(TRT_MODEL_CONVERSION_BASE):
                         "step": 1,
                     },
                 ),
-                "opset_version": (
-                    "INT",
-                    {
-                        "default": 17,
-                        "min": 0,
-                        "max": 1000,
-                        "step": 1,
-                    },
-                ),
             },
         }
 
@@ -788,7 +776,6 @@ class STATIC_TRT_MODEL_CONVERSION(TRT_MODEL_CONVERSION_BASE):
         width_opt,
         context_opt,
         num_video_frames,
-        opset_version,
     ):
         return super()._convert(
             model,
@@ -806,7 +793,6 @@ class STATIC_TRT_MODEL_CONVERSION(TRT_MODEL_CONVERSION_BASE):
             context_opt,
             context_opt,
             num_video_frames,
-            opset_version,
             is_static=True,
         )
 
