@@ -194,7 +194,7 @@ class TRT_MODEL_CONVERSION_BASE:
             y_dim = model.model.model_config.unet_config.get("vec_in_dim", None)
             extra_input = {"guidance": ()}
             dtype = torch.bfloat16
-        elif isinstance(model.model, comfy.model_base.Wan21):
+        elif isinstance(model.model, comfy.model_base.WAN21):
             context_dim = 2048
             context_len_min = 256
             context_len = 256
