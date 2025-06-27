@@ -257,7 +257,8 @@ class TRT_MODEL_CONVERSION_BASE:
                 _unet.transformer_options = transformer_options
                 unet = _unet
 
-            input_channels = model.model.model_config.unet_config.get("in_channels", 4)
+            # input_channels = model.model.model_config.unet_config.get("in_channels", 4)
+            input_channels = 16  # hack for wan
 
             inputs_shapes_min = (
                 (batch_size_min, input_channels, height_min // 8, width_min // 8),
