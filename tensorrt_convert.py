@@ -222,7 +222,7 @@ class TRT_MODEL_CONVERSION_BASE:
             unet = wan_wrapper
 
             # Set input shapes for WAN model
-            input_channels = 4  # WAN uses 4 channels for latent space
+            input_channels = 16  # WAN uses 4 channels for latent space
             inputs_shapes_min = (
                 (
                     batch_size_min,
