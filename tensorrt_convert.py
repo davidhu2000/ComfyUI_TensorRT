@@ -3,8 +3,6 @@ import sys
 import os
 import time
 import comfy.model_management
-from torch.onnx import register_custom_op_symbolic
-import torch.onnx.symbolic_helper as sym_help
 
 import tensorrt as trt
 import folder_paths
@@ -422,6 +420,10 @@ class TRT_MODEL_CONVERSION_BASE:
             return ()
 
         os.makedirs(os.path.dirname(output_onnx), exist_ok=True)
+
+        import torch
+        from torch.onnx import register_custom_op_symbolic
+        import torch.onnx.symbolic_helper as sym_help
 
         def rms_norm_symbolic(g, input, weight, eps, bias=None):
             dtype = g.op("Constant", value_t=torch.tensor(torch.float32))
