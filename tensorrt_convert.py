@@ -441,7 +441,8 @@ class TRT_MODEL_CONVERSION_BASE:
             input_names=input_names,
             output_names=output_names,
             opset_version=opset_version,
-            dynamic_axes=dynamic_axes,
+            # dynamic_axes=dynamic_axes,
+            dynamic_axes=None,  # disable dynamic shapes
             dynamo=True,
         )
 
