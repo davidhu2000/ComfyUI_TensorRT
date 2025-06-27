@@ -420,6 +420,18 @@ class TRT_MODEL_CONVERSION_BASE:
             return ()
 
         os.makedirs(os.path.dirname(output_onnx), exist_ok=True)
+        print("unet")
+        print(unet)
+        print("inputs")
+        print(inputs)
+        print("output_onnx")
+        print(output_onnx)
+        print("input_names")
+        print(input_names)
+        print("output_names")
+        print(output_names)
+        print("dynamic_axes")
+        print(dynamic_axes)
         torch.onnx.export(
             unet,
             inputs,
