@@ -420,25 +420,18 @@ class TRT_MODEL_CONVERSION_BASE:
             return ()
 
         os.makedirs(os.path.dirname(output_onnx), exist_ok=True)
-
-        import torch
-        from torch.onnx import register_custom_op_symbolic
-        import torch.onnx.symbolic_helper as sym_help
-
-        def rms_norm_symbolic(g, input, weight, eps, bias=None):
-            dtype = g.op("Constant", value_t=torch.tensor(torch.float32))
-            eps = g.op("Constant", value_t=torch.tensor(eps))
-            input_squared = g.op("Mul", input, input)
-            mean = g.op("ReduceMean", input_squared, axes_i=[-1], keepdims_i=1)
-            denom = g.op("Add", mean, eps)
-            rsqrt = g.op("Rsqrt", denom)
-            normed = g.op("Mul", input, rsqrt)
-            scaled = g.op("Mul", normed, weight)
-            return scaled
-
-        # Register for opset 17
-        register_custom_op_symbolic("aten::rms_norm", rms_norm_symbolic, 17)
-
+        print("unet")
+        print(unet)
+        print("inputs")
+        print(inputs)
+        print("output_onnx")
+        print(output_onnx)
+        print("input_names")
+        print(input_names)
+        print("output_names")
+        print(output_names)
+        print("dynamic_axes")
+        print(dynamic_axes)
         torch.onnx.export(
             unet,
             inputs,
