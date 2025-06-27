@@ -441,7 +441,7 @@ class TRT_MODEL_CONVERSION_BASE:
             output_names=output_names,
             opset_version=17,
             dynamic_axes=None,
-            dyanmo=True,
+            dynamo=True,
         )
 
         comfy.model_management.unload_all_models()
