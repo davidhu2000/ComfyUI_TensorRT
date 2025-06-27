@@ -194,12 +194,6 @@ class TRT_MODEL_CONVERSION_BASE:
             y_dim = model.model.model_config.unet_config.get("vec_in_dim", None)
             extra_input = {"guidance": ()}
             dtype = torch.bfloat16
-        elif isinstance(model.model, comfy.model_base.Wan21):
-            context_dim = 2048
-            context_len_min = 256
-            context_len = 256
-            # y_dim = model.model.model_config.unet_config.get("vec_in_dim", None)
-            # dtype = torch.bfloat16
 
         if context_dim is not None:
             input_names = ["x", "timesteps", "context"]
