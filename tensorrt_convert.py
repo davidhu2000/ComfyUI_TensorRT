@@ -194,68 +194,6 @@ class TRT_MODEL_CONVERSION_BASE:
             y_dim = model.model.model_config.unet_config.get("vec_in_dim", None)
             extra_input = {"guidance": ()}
             dtype = torch.bfloat16
-        elif isinstance(model.model, comfy.model_base.WAN21):  # WAN model
-            # WAN model specific configuration
-            context_dim = model.model.model_config.unet_config.get("context_dim", 1024)
-            y_dim = 0  # WAN doesn't use y input
-            context_len = 1  # WAN uses single context vector
-            context_len_min = 1
-            extra_input = {}
-            input_names = ["x", "timesteps", "context"]
-            output_names = ["out"]
-
-            # WAN uses 5D tensors (batch, channels, frames, height, width)
-            dynamic_axes = {
-                "x": {0: "batch", 3: "height", 4: "width"},
-                "timesteps": {0: "batch"},
-                "context": {0: "batch"},
-            }
-
-            # WAN model wrapper to handle the forward pass
-            class WANWrapper(torch.nn.Module):
-                def forward(self, x, timesteps, context, **kwargs):
-                    # WAN expects context as last argument and no extra kwargs
-                    return self.unet(x, timesteps, context)
-
-            wan_wrapper = WANWrapper()
-            wan_wrapper.unet = unet
-            unet = wan_wrapper
-
-            # Set input shapes for WAN model
-            input_channels = 4  # WAN uses 4 channels for latent space
-            inputs_shapes_min = (
-                (
-                    batch_size_min,
-                    input_channels,
-                    num_video_frames,
-                    height_min // 8,
-                    width_min // 8,
-                ),
-                (batch_size_min,),
-                (batch_size_min, context_len * context_min, context_dim),
-            )
-            inputs_shapes_opt = (
-                (
-                    batch_size_opt,
-                    input_channels,
-                    num_video_frames,
-                    height_opt // 8,
-                    width_opt // 8,
-                ),
-                (batch_size_opt,),
-                (batch_size_opt, context_len * context_opt, context_dim),
-            )
-            inputs_shapes_max = (
-                (
-                    batch_size_max,
-                    input_channels,
-                    num_video_frames,
-                    height_max // 8,
-                    width_max // 8,
-                ),
-                (batch_size_max,),
-                (batch_size_max, context_len * context_max, context_dim),
-            )
 
         if context_dim is not None:
             input_names = ["x", "timesteps", "context"]
@@ -313,83 +251,23 @@ class TRT_MODEL_CONVERSION_BASE:
                 _unet.transformer_options = transformer_options
                 unet = _unet
 
-            # Only define input shapes if not already defined (for WAN models)
-            if "inputs_shapes_min" not in locals():
-                input_channels = model.model.model_config.unet_config.get(
-                    "in_channels", 4
-                )
+            input_channels = model.model.model_config.unet_config.get("in_channels", 4)
 
-                # Check if this is a video model (like WAN)
-                if (
-                    hasattr(model.model, "model_type")
-                    and model.model.model_type == "wan"
-                ):
-                    # 5D input for video (batch, channels, frames, height, width)
-                    inputs_shapes_min = (
-                        (
-                            batch_size_min,
-                            input_channels,
-                            num_video_frames,
-                            height_min // 8,
-                            width_min // 8,
-                        ),
-                        (batch_size_min,),
-                        (batch_size_min, context_len_min * context_min, context_dim),
-                    )
-                    inputs_shapes_opt = (
-                        (
-                            batch_size_opt,
-                            input_channels,
-                            num_video_frames,
-                            height_opt // 8,
-                            width_opt // 8,
-                        ),
-                        (batch_size_opt,),
-                        (batch_size_opt, context_len * context_opt, context_dim),
-                    )
-                    inputs_shapes_max = (
-                        (
-                            batch_size_max,
-                            input_channels,
-                            num_video_frames,
-                            height_max // 8,
-                            width_max // 8,
-                        ),
-                        (batch_size_max,),
-                        (batch_size_max, context_len * context_max, context_dim),
-                    )
-                else:
-                    # 4D input for images (batch, channels, height, width)
-                    inputs_shapes_min = (
-                        (
-                            batch_size_min,
-                            input_channels,
-                            height_min // 8,
-                            width_min // 8,
-                        ),
-                        (batch_size_min,),
-                        (batch_size_min, context_len_min * context_min, context_dim),
-                    )
-                    inputs_shapes_opt = (
-                        (
-                            batch_size_opt,
-                            input_channels,
-                            height_opt // 8,
-                            width_opt // 8,
-                        ),
-                        (batch_size_opt,),
-                        (batch_size_opt, context_len * context_opt, context_dim),
-                    )
-                    inputs_shapes_max = (
-                        (
-                            batch_size_max,
-                            input_channels,
-                            height_max // 8,
-                            width_max // 8,
-                        ),
-                        (batch_size_max,),
-                        (batch_size_max, context_len * context_max, context_dim),
-                    )
+            inputs_shapes_min = (
+                (batch_size_min, input_channels, height_min // 8, width_min // 8),
+                (batch_size_min,),
+                (batch_size_min, context_len_min * context_min, context_dim),
+            )
+            inputs_shapes_opt = (
+                (batch_size_opt, input_channels, height_opt // 8, width_opt // 8),
+                (batch_size_opt,),
+                (batch_size_opt, context_len * context_opt, context_dim),
+            )
+            inputs_shapes_max = (
+                (batch_size_max, input_channels, height_max // 8, width_max // 8),
+                (batch_size_max,),
+                (batch_size_max, context_len * context_max, context_dim),
+            )
 
             if y_dim > 0:
                 input_names.append("y")
